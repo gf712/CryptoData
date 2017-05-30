@@ -56,13 +56,16 @@ def main(args):
             # else:
             #     input_timestamps = pd.to_datetime(input_data.index)
 
+            last_id = '{:.0f}'.format(input_timestamps[-1].timestamp() * 1000000000)
+
         except:
             raise IOError("Expected index to contain datetime values")
 
     else:
-        input_timestamps = [0]
+        input_timestamps = []
         input_prices = []
         input_volume = []
+        last_id = 0
 
     # store data and trade volume in a list
     prices = []
@@ -70,7 +73,7 @@ def main(args):
 
     # keep track of iterations
     i = 0
-    last_id = '{:.0f}'.format(input_timestamps[-1].timestamp() * 1000000000)
+
     timestamps = []
 
     if args.verbose:
@@ -78,7 +81,6 @@ def main(args):
 
     while int(last_id) < time.time() * 1000000000:
 
-        from http.client import RemoteDisconnected
         try:
             pair_data = k.query_public(method='Trades', req={'pair': args.pair, 'since': last_id})
 
@@ -92,19 +94,16 @@ def main(args):
             prices += [x[0] for x in pair_data['result'][args.pair]]
             volumes += [x[1] for x in pair_data['result'][args.pair]]
             if i % 10 == 0 and args.verbose:
-                print(datetime.datetime.fromtimestamp(timestamps[-1]).strftime('%Y-%m-%d %H:%M:%S'))
+                print(datetime.datetime.fromtimestamp(timestamps[-1]).strftime('%d-%m-%Y %H:%M:%S'))
             i += 1
-
-        except KeyboardInterrupt:
-            break
-
-        except RemoteDisconnected:
-            break
 
         except ValueError:
             if args.verbose:
                 print('Reached request maximum. Sleeping for 10 seconds...')
             continue
+
+        except:
+            break
 
     if args.verbose:
         print("\nFinished retrieving all the data. Putting everything together in a {} file".format(args.file_format))
@@ -113,6 +112,10 @@ def main(args):
     final_price = np.concatenate((input_prices, prices))
     final_volume = np.concatenate((input_volume, volumes))
     final_timestamps = input_timestamps + pd.to_datetime(timestamps, unit='s').tolist()
+
+    # print(len(final_timestamps))
+    # print(len(final_volume))
+    # print(len(final_price))
 
     final_dataset = pd.DataFrame(np.column_stack((final_price, final_volume)),
                                  columns=['{}_price'.format(args.pair), 'volume'],
