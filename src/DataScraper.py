@@ -37,6 +37,8 @@ def main(args):
 
         input_prices = input_data['{}_price'.format(args.pair)]
         input_volume = input_data['volume']
+        input_buy_sell = input_data['buy/sell']
+        input_market_limit = input_data['market/limit']
 
         try:
             if args.verbose:
@@ -65,11 +67,16 @@ def main(args):
         input_timestamps = []
         input_prices = []
         input_volume = []
+        input_buy_sell = []
+        input_market_limit = []
+
         last_id = 0
 
     # store data and trade volume in a list
     prices = []
     volumes = []
+    buy_sell = []
+    market_limit = []
 
     # keep track of iterations
     i = 0
@@ -90,9 +97,12 @@ def main(args):
             else:
                 last_id = pair_data['result']['last']
 
-            timestamps += [x[2] for x in pair_data['result'][args.pair]]
             prices += [x[0] for x in pair_data['result'][args.pair]]
             volumes += [x[1] for x in pair_data['result'][args.pair]]
+            timestamps += [x[2] for x in pair_data['result'][args.pair]]
+            buy_sell += [x[3] for x in pair_data['result'][args.pair]]
+            market_limit += [x[4] for x in pair_data['result'][args.pair]]
+
             if i % 10 == 0 and args.verbose:
                 print(datetime.datetime.fromtimestamp(timestamps[-1]).strftime('%d-%m-%Y %H:%M:%S'))
             i += 1
@@ -111,14 +121,16 @@ def main(args):
     # getting all the data together
     final_price = np.concatenate((input_prices, prices))
     final_volume = np.concatenate((input_volume, volumes))
+    final_buy_sell = np.concatenate((input_buy_sell, buy_sell))
+    final_market_limit = np.concatenate((input_market_limit, market_limit))
     final_timestamps = input_timestamps + pd.to_datetime(timestamps, unit='s').tolist()
 
     # print(len(final_timestamps))
     # print(len(final_volume))
     # print(len(final_price))
 
-    final_dataset = pd.DataFrame(np.column_stack((final_price, final_volume)),
-                                 columns=['{}_price'.format(args.pair), 'volume'],
+    final_dataset = pd.DataFrame(np.column_stack((final_price, final_volume, final_buy_sell, final_market_limit)),
+                                 columns=['{}_price'.format(args.pair), 'volume', 'buy/sell', 'market/limit'],
                                  index=final_timestamps)
 
     if len(args.output_file) == 0:
